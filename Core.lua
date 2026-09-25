@@ -1,0 +1,761 @@
+--========================================================
+-- DXPanel Core
+-- Red / Black Neon UI
+--========================================================
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local DXPanel = {}
+DXPanel.__index = DXPanel
+
+--========================================================
+-- CONFIG
+--========================================================
+
+local CONFIG = {
+    Name = "DXPanel",
+    Title = "DXPanel",
+
+    Width = 560,
+    Height = 420,
+
+    MinWidth = 420,
+    MinHeight = 300,
+
+    Background = Color3.fromRGB(12, 12, 14),
+    Panel = Color3.fromRGB(18, 18, 21),
+    Secondary = Color3.fromRGB(25, 25, 29),
+
+    Text = Color3.fromRGB(245, 245, 245),
+    SubText = Color3.fromRGB(150, 150, 155),
+
+    Accent = Color3.fromRGB(220, 35, 45),
+    AccentDark = Color3.fromRGB(120, 15, 25),
+
+    TweenTime = 0.18,
+}
+
+--========================================================
+-- UTILS
+--========================================================
+
+local function tween(object, properties, time)
+    local info = TweenInfo.new(
+        time or CONFIG.TweenTime,
+        Enum.EasingStyle.Quart,
+        Enum.EasingDirection.Out
+    )
+
+    TweenService:Create(object, info, properties):Play()
+end
+
+local function corner(parent, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius or 8)
+    c.Parent = parent
+    return c
+end
+
+local function stroke(parent, color, transparency, thickness)
+    local s = Instance.new("UIStroke")
+    s.Color = color or CONFIG.Accent
+    s.Transparency = transparency or 0
+    s.Thickness = thickness or 1
+    s.Parent = parent
+    return s
+end
+
+local function padding(parent, left, right, top, bottom)
+    local p = Instance.new("UIPadding")
+    p.PaddingLeft = UDim.new(0, left or 0)
+    p.PaddingRight = UDim.new(0, right or 0)
+    p.PaddingTop = UDim.new(0, top or 0)
+    p.PaddingBottom = UDim.new(0, bottom or 0)
+    p.Parent = parent
+    return p
+end
+
+--========================================================
+-- CREATE WINDOW
+--========================================================
+
+function DXPanel:CreateWindow(options)
+
+    options = options or {}
+
+    local Window = {}
+    Window.__index = Window
+
+    setmetatable(Window, {
+        __index = self
+    })
+
+    Window.Title = options.Title or CONFIG.Title
+    Window.Tabs = {}
+    Window.CurrentTab = nil
+
+    --====================================================
+    -- SCREEN GUI
+    --====================================================
+
+    local old = PlayerGui:FindFirstChild(CONFIG.Name)
+
+    if old then
+        old:Destroy()
+    end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = CONFIG.Name
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.IgnoreGuiInset = true
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.DisplayOrder = 999999
+    ScreenGui.Parent = PlayerGui
+
+    Window.ScreenGui = ScreenGui
+
+    --====================================================
+    -- MAIN
+    --====================================================
+
+    local Main = Instance.new("Frame")
+    Main.Name = "Main"
+    Main.Size = UDim2.fromOffset(
+        options.Width or CONFIG.Width,
+        options.Height or CONFIG.Height
+    )
+    Main.Position = UDim2.new(0.5, -(CONFIG.Width / 2), 0.5, -(CONFIG.Height / 2))
+    Main.BackgroundColor3 = CONFIG.Background
+    Main.BorderSizePixel = 0
+    Main.ClipsDescendants = true
+    Main.Parent = ScreenGui
+
+    corner(Main, 12)
+    stroke(Main, CONFIG.Accent, 0.25, 1)
+
+    Window.Main = Main
+
+    --====================================================
+    -- TOP BAR
+    --====================================================
+
+    local Top = Instance.new("Frame")
+    Top.Name = "TopBar"
+    Top.Size = UDim2.new(1, 0, 0, 48)
+    Top.BackgroundColor3 = CONFIG.Panel
+    Top.BorderSizePixel = 0
+    Top.Parent = Main
+
+    corner(Top, 12)
+
+    local TopFix = Instance.new("Frame")
+    TopFix.Size = UDim2.new(1, 0, 0, 12)
+    TopFix.Position = UDim2.new(0, 0, 1, -12)
+    TopFix.BackgroundColor3 = CONFIG.Panel
+    TopFix.BorderSizePixel = 0
+    TopFix.Parent = Top
+
+    -- Accent line
+
+    local AccentLine = Instance.new("Frame")
+    AccentLine.Size = UDim2.new(1, 0, 0, 2)
+    AccentLine.Position = UDim2.new(0, 0, 1, -2)
+    AccentLine.BackgroundColor3 = CONFIG.Accent
+    AccentLine.BorderSizePixel = 0
+    AccentLine.Parent = Top
+
+    -- Title
+
+    local Title = Instance.new("TextLabel")
+    Title.BackgroundTransparency = 1
+    Title.Position = UDim2.fromOffset(16, 0)
+    Title.Size = UDim2.new(1, -120, 1, 0)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = Window.Title
+    Title.TextColor3 = CONFIG.Text
+    Title.TextSize = 16
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = Top
+
+    -- Close
+
+    local Close = Instance.new("TextButton")
+    Close.Name = "Close"
+    Close.Size = UDim2.fromOffset(34, 34)
+    Close.Position = UDim2.new(1, -42, 0, 7)
+    Close.BackgroundColor3 = Color3.fromRGB(35, 20, 22)
+    Close.Text = "×"
+    Close.TextColor3 = CONFIG.Text
+    Close.TextSize = 22
+    Close.Font = Enum.Font.GothamBold
+    Close.AutoButtonColor = false
+    Close.Parent = Top
+
+    corner(Close, 8)
+
+    Close.MouseEnter:Connect(function()
+        tween(Close, {
+            BackgroundColor3 = CONFIG.Accent
+        })
+    end)
+
+    Close.MouseLeave:Connect(function()
+        tween(Close, {
+            BackgroundColor3 = Color3.fromRGB(35, 20, 22)
+        })
+    end)
+
+    Close.MouseButton1Click:Connect(function()
+        Main.Visible = false
+        Window.IsOpen = false
+    end)
+
+    Window.CloseButton = Close
+
+    --====================================================
+    -- TAB BAR
+    --====================================================
+
+    local TabBar = Instance.new("ScrollingFrame")
+    TabBar.Name = "TabBar"
+    TabBar.Size = UDim2.new(0, 130, 1, -48)
+    TabBar.Position = UDim2.new(0, 0, 0, 48)
+    TabBar.BackgroundColor3 = CONFIG.Panel
+    TabBar.BorderSizePixel = 0
+    TabBar.ScrollBarThickness = 2
+    TabBar.ScrollBarImageColor3 = CONFIG.Accent
+    TabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
+    TabBar.Parent = Main
+
+    padding(TabBar, 8, 8, 10, 10)
+
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.Padding = UDim.new(0, 6)
+    TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabLayout.Parent = TabBar
+
+    TabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        TabBar.CanvasSize = UDim2.new(
+            0,
+            0,
+            0,
+            TabLayout.AbsoluteContentSize.Y + 20
+        )
+    end)
+
+    Window.TabBar = TabBar
+
+    --====================================================
+    -- CONTENT
+    --====================================================
+
+    local Content = Instance.new("Frame")
+    Content.Name = "Content"
+    Content.Size = UDim2.new(1, -130, 1, -48)
+    Content.Position = UDim2.new(0, 130, 0, 48)
+    Content.BackgroundColor3 = CONFIG.Background
+    Content.BorderSizePixel = 0
+    Content.Parent = Main
+
+    Window.Content = Content
+
+    --====================================================
+    -- DRAG
+    --====================================================
+
+    local dragging = false
+    local dragStart
+    local startPos
+
+    Top.InputBegan:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            dragStart = input.Position
+            startPos = Main.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+
+        end
+
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+
+        if not dragging then
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local delta = input.Position - dragStart
+
+        Main.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+
+    end)
+
+    --====================================================
+    -- RESIZE HANDLE
+    --====================================================
+
+    local Resize = Instance.new("TextButton")
+    Resize.Name = "Resize"
+    Resize.Size = UDim2.fromOffset(24, 24)
+    Resize.Position = UDim2.new(1, -24, 1, -24)
+    Resize.BackgroundTransparency = 1
+    Resize.Text = "◢"
+    Resize.TextColor3 = CONFIG.Accent
+    Resize.TextSize = 16
+    Resize.Font = Enum.Font.GothamBold
+    Resize.AutoButtonColor = false
+    Resize.Parent = Main
+
+    local resizing = false
+    local resizeStart
+    local startSize
+
+    Resize.InputBegan:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            resizing = true
+            resizeStart = input.Position
+            startSize = Main.AbsoluteSize
+
+            input.Changed:Connect(function()
+
+                if input.UserInputState == Enum.UserInputState.End then
+                    resizing = false
+                end
+
+            end)
+
+        end
+
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+
+        if not resizing then
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local delta = input.Position - resizeStart
+
+        local width = math.max(
+            CONFIG.MinWidth,
+            startSize.X + delta.X
+        )
+
+        local height = math.max(
+            CONFIG.MinHeight,
+            startSize.Y + delta.Y
+        )
+
+        Main.Size = UDim2.fromOffset(width, height)
+
+    end)
+
+    --====================================================
+    -- OPEN BUTTON
+    --====================================================
+
+    local OpenButton = Instance.new("TextButton")
+    OpenButton.Name = "OpenButton"
+    OpenButton.Size = UDim2.fromOffset(48, 48)
+    OpenButton.Position = UDim2.new(0, 18, 0.5, -24)
+    OpenButton.BackgroundColor3 = CONFIG.Panel
+    OpenButton.Text = "DX"
+    OpenButton.TextColor3 = CONFIG.Text
+    OpenButton.TextSize = 14
+    OpenButton.Font = Enum.Font.GothamBold
+    OpenButton.AutoButtonColor = false
+    OpenButton.Visible = false
+    OpenButton.Parent = ScreenGui
+
+    corner(OpenButton, 12)
+    stroke(OpenButton, CONFIG.Accent, 0.15, 1)
+
+    OpenButton.MouseButton1Click:Connect(function()
+
+        Main.Visible = true
+        Window.IsOpen = true
+
+        tween(Main, {
+            Size = Main.Size
+        })
+
+    end)
+
+    Window.OpenButton = OpenButton
+
+    --====================================================
+    -- PUBLIC METHODS
+    --====================================================
+
+    function Window:Open()
+        Main.Visible = true
+        OpenButton.Visible = false
+        self.IsOpen = true
+    end
+
+    function Window:Close()
+        Main.Visible = false
+        OpenButton.Visible = true
+        self.IsOpen = false
+    end
+
+    function Window:Toggle()
+        if self.IsOpen then
+            self:Close()
+        else
+            self:Open()
+        end
+    end
+
+    --====================================================
+    -- FIRST OPEN
+    --====================================================
+
+    Window.IsOpen = true
+
+    return Window
+end
+
+--========================================================
+-- TAB
+--========================================================
+
+function DXPanel:AddTab(Window, options)
+
+    options = options or {}
+
+    local Tab = {}
+    Tab.__index = Tab
+
+    Tab.Title = options.Title or "Tab"
+    Tab.Icon = options.Icon or ""
+
+    Tab.Page = Instance.new("ScrollingFrame")
+    Tab.Page.Name = Tab.Title
+    Tab.Page.Size = UDim2.new(1, 0, 1, 0)
+    Tab.Page.BackgroundTransparency = 1
+    Tab.Page.BorderSizePixel = 0
+    Tab.Page.ScrollBarThickness = 3
+    Tab.Page.ScrollBarImageColor3 = CONFIG.Accent
+    Tab.Page.Visible = false
+    Tab.Page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    Tab.Page.Parent = Window.Content
+
+    padding(Tab.Page, 12, 12, 12, 12)
+
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 8)
+    Layout.SortOrder = Enum.SortOrder.LayoutOrder
+    Layout.Parent = Tab.Page
+
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+
+        Tab.Page.CanvasSize = UDim2.new(
+            0,
+            0,
+            0,
+            Layout.AbsoluteContentSize.Y + 20
+        )
+
+    end)
+
+    local Button = Instance.new("TextButton")
+    Button.Name = Tab.Title
+    Button.Size = UDim2.new(1, 0, 0, 38)
+    Button.BackgroundColor3 = CONFIG.Secondary
+    Button.Text = (Tab.Icon ~= "" and Tab.Icon .. "  " or "") .. Tab.Title
+    Button.TextColor3 = CONFIG.SubText
+    Button.TextSize = 13
+    Button.Font = Enum.Font.GothamSemibold
+    Button.AutoButtonColor = false
+    Button.Parent = Window.TabBar
+
+    corner(Button, 8)
+
+    Tab.Button = Button
+
+    Button.MouseButton1Click:Connect(function()
+        Window:SelectTab(Tab)
+    end)
+
+    Window.Tabs[#Window.Tabs + 1] = Tab
+
+    function Tab:Select()
+        Window:SelectTab(self)
+    end
+
+    --====================================================
+    -- SECTION
+    --====================================================
+
+    function Tab:Section(options)
+
+        options = options or {}
+
+        local Section = Instance.new("TextLabel")
+        Section.Size = UDim2.new(1, 0, 0, 28)
+        Section.BackgroundTransparency = 1
+        Section.Text = options.Title or "Section"
+        Section.TextColor3 = CONFIG.Accent
+        Section.TextSize = 12
+        Section.Font = Enum.Font.GothamBold
+        Section.TextXAlignment = Enum.TextXAlignment.Left
+        Section.Parent = self.Page
+
+        return Section
+    end
+
+    --====================================================
+    -- BUTTON
+    --====================================================
+
+    function Tab:Button(options)
+
+        options = options or {}
+
+        local ButtonFrame = Instance.new("TextButton")
+        ButtonFrame.Size = UDim2.new(1, 0, 0, 42)
+        ButtonFrame.BackgroundColor3 = CONFIG.Panel
+        ButtonFrame.Text = options.Title or "Button"
+        ButtonFrame.TextColor3 = CONFIG.Text
+        ButtonFrame.TextSize = 13
+        ButtonFrame.Font = Enum.Font.GothamSemibold
+        ButtonFrame.AutoButtonColor = false
+        ButtonFrame.Parent = self.Page
+
+        corner(ButtonFrame, 8)
+        stroke(ButtonFrame, CONFIG.Accent, 0.8, 1)
+
+        ButtonFrame.MouseEnter:Connect(function()
+            tween(ButtonFrame, {
+                BackgroundColor3 = Color3.fromRGB(35, 20, 22)
+            })
+        end)
+
+        ButtonFrame.MouseLeave:Connect(function()
+            tween(ButtonFrame, {
+                BackgroundColor3 = CONFIG.Panel
+            })
+        end)
+
+        ButtonFrame.MouseButton1Click:Connect(function()
+
+            if typeof(options.Callback) == "function" then
+                task.spawn(options.Callback)
+            end
+
+        end)
+
+        return ButtonFrame
+    end
+
+    --====================================================
+    -- TOGGLE
+    --====================================================
+
+    function Tab:Toggle(options)
+
+        options = options or {}
+
+        local state = options.Default == true
+
+        local ButtonFrame = Instance.new("TextButton")
+        ButtonFrame.Size = UDim2.new(1, 0, 0, 42)
+        ButtonFrame.BackgroundColor3 = CONFIG.Panel
+        ButtonFrame.Text = ""
+        ButtonFrame.AutoButtonColor = false
+        ButtonFrame.Parent = self.Page
+
+        corner(ButtonFrame, 8)
+
+        local Label = Instance.new("TextLabel")
+        Label.BackgroundTransparency = 1
+        Label.Position = UDim2.fromOffset(12, 0)
+        Label.Size = UDim2.new(1, -70, 1, 0)
+        Label.Text = options.Title or "Toggle"
+        Label.TextColor3 = CONFIG.Text
+        Label.TextSize = 13
+        Label.Font = Enum.Font.GothamSemibold
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ButtonFrame
+
+        local Indicator = Instance.new("Frame")
+        Indicator.Size = UDim2.fromOffset(38, 20)
+        Indicator.Position = UDim2.new(1, -50, 0.5, -10)
+        Indicator.BackgroundColor3 = Color3.fromRGB(45, 45, 48)
+        Indicator.Parent = ButtonFrame
+
+        corner(Indicator, 10)
+
+        local Dot = Instance.new("Frame")
+        Dot.Size = UDim2.fromOffset(14, 14)
+        Dot.Position = UDim2.fromOffset(3, 3)
+        Dot.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+        Dot.Parent = Indicator
+
+        corner(Dot, 7)
+
+        local function update()
+
+            if state then
+
+                tween(Indicator, {
+                    BackgroundColor3 = CONFIG.Accent
+                })
+
+                tween(Dot, {
+                    Position = UDim2.new(1, -17, 0, 3),
+                    BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                })
+
+            else
+
+                tween(Indicator, {
+                    BackgroundColor3 = Color3.fromRGB(45, 45, 48)
+                })
+
+                tween(Dot, {
+                    Position = UDim2.fromOffset(3, 3),
+                    BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+                })
+
+            end
+
+        end
+
+        ButtonFrame.MouseButton1Click:Connect(function()
+
+            state = not state
+            update()
+
+            if typeof(options.Callback) == "function" then
+                task.spawn(options.Callback, state)
+            end
+
+        end)
+
+        update()
+
+        return {
+            Set = function(_, value)
+
+                state = value == true
+                update()
+
+                if typeof(options.Callback) == "function" then
+                    task.spawn(options.Callback, state)
+                end
+
+            end,
+
+            Get = function()
+                return state
+            end
+        }
+
+    end
+
+    --====================================================
+    -- LABEL
+    --====================================================
+
+    function Tab:Label(text)
+
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, 0, 0, 30)
+        Label.BackgroundTransparency = 1
+        Label.Text = tostring(text or "")
+        Label.TextColor3 = CONFIG.SubText
+        Label.TextSize = 12
+        Label.Font = Enum.Font.Gotham
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = self.Page
+
+        return Label
+    end
+
+    return Tab
+end
+
+--========================================================
+-- SELECT TAB
+--========================================================
+
+function DXPanel:SelectTab(Window, Tab)
+
+    for _, item in ipairs(Window.Tabs) do
+
+        item.Page.Visible = false
+
+        tween(item.Button, {
+            BackgroundColor3 = CONFIG.Secondary
+        })
+
+        tween(item.Button, {
+            TextColor3 = CONFIG.SubText
+        })
+
+    end
+
+    Tab.Page.Visible = true
+
+    tween(Tab.Button, {
+        BackgroundColor3 = Color3.fromRGB(55, 18, 22)
+    })
+
+    tween(Tab.Button, {
+        TextColor3 = CONFIG.Text
+    })
+
+    Window.CurrentTab = Tab
+end
+
+function DXPanel:AttachWindowMethods(Window)
+
+    function Window:Tab(options)
+        return DXPanel:AddTab(self, options)
+    end
+
+    function Window:SelectTab(tab)
+        return DXPanel:SelectTab(self, tab)
+    end
+
+    return Window
+end
+
+--========================================================
+-- RETURN
+--========================================================
+
+return DXPanel
