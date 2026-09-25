@@ -5,23 +5,32 @@
 local BASE_URL =
     "https://raw.githubusercontent.com/aomsinuki-hub/DXPanel/main/"
 
-local function Load(path)
+--========================================================
+-- SAFE LOAD
+--========================================================
 
+local function Load(path)
     local url = BASE_URL .. path
 
     local success, result = pcall(function()
+        local source = game:HttpGet(url)
 
-        return loadstring(
-            game:HttpGet(url)
-        )()
+        if not source or source == "" then
+            error("Empty response")
+        end
 
+        local fn, compileError = loadstring(source)
+
+        if not fn then
+            error(compileError or "loadstring failed")
+        end
+
+        return fn()
     end)
 
     if not success then
-
         warn("[DXPanel] Failed to load:", path)
-        warn(result)
-
+        warn("[DXPanel] Error:", result)
         return nil
     end
 
@@ -29,7 +38,7 @@ local function Load(path)
 end
 
 --========================================================
--- CORE
+-- LOAD CORE
 --========================================================
 
 local DXPanel = Load("Core.lua")
@@ -39,62 +48,100 @@ if not DXPanel then
 end
 
 --========================================================
--- WINDOW
+-- CREATE WINDOW
 --========================================================
 
 local Window = DXPanel:CreateWindow({
     Title = "DXPanel",
+
     Width = 560,
     Height = 420,
 })
 
+if not Window then
+    error("[DXPanel] Failed to create Window")
+end
+
+-- สำคัญ:
+-- ต้อง Attach ก่อนโหลด Tab
 DXPanel:AttachWindowMethods(Window)
 
 --========================================================
--- MANIFEST
+-- LOAD MANIFEST
 --========================================================
 
 local Manifest = Load("Tabs/Manifest.lua")
 
-if not Manifest then
-    error("[DXPanel] Manifest.lua failed to load")
+if type(Manifest) ~= "table" then
+    error("[DXPanel] Manifest.lua must return a table")
 end
 
 --========================================================
 -- LOAD TABS
 --========================================================
 
-for _, Info in ipairs(Manifest) do
+local loadedTabs = 0
 
-    if Info.Enabled ~= false then
+for index, Info in ipairs(Manifest) do
 
-        local path =
-            "Tabs/" .. tostring(Info.Name) .. ".lua"
+    if type(Info) ~= "table" then
+        warn(
+            "[DXPanel] Invalid manifest entry:",
+            index
+        )
 
-        local TabFunction = Load(path)
-
-        if TabFunction then
-
-            local success, err = pcall(function()
-
-                TabFunction(Window, Info)
-
-            end)
-
-            if not success then
-
-                warn(
-                    "[DXPanel] Tab error:",
-                    Info.Name,
-                    err
-                )
-
-            end
-
-        end
-
+        continue
     end
 
+    if Info.Enabled == false then
+        continue
+    end
+
+    if not Info.Name then
+        warn(
+            "[DXPanel] Tab has no Name:",
+            index
+        )
+
+        continue
+    end
+
+    local path =
+        "Tabs/" ..
+        tostring(Info.Name) ..
+        ".lua"
+
+    local TabFunction = Load(path)
+
+    if type(TabFunction) ~= "function" then
+
+        warn(
+            "[DXPanel] Invalid Tab module:",
+            path
+        )
+
+        continue
+    end
+
+    local success, err = pcall(function()
+        TabFunction(Window, Info)
+    end)
+
+    if success then
+        loadedTabs += 1
+
+        print(
+            "[DXPanel] Loaded Tab:",
+            Info.Name
+        )
+    else
+        warn(
+            "[DXPanel] Tab error:",
+            Info.Name
+        )
+
+        warn(err)
+    end
 end
 
 --========================================================
@@ -107,6 +154,15 @@ if #Window.Tabs > 0 then
         Window.Tabs[1]
     )
 
+else
+
+    warn("[DXPanel] No enabled tabs loaded")
+
 end
 
-print("[DXPanel] Loaded successfully")
+print(
+    "[DXPanel] Loaded successfully | Tabs:",
+    loadedTabs
+)
+
+return Window
