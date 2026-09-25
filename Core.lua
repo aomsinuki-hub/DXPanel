@@ -1,6 +1,7 @@
 --========================================================
--- DXPanel CORE
+-- DXPanel CORE v2
 -- Red / Black Neon UI
+-- Fixed: Close / Open / Toggle / Drag / Resize
 --========================================================
 
 local Players = game:GetService("Players")
@@ -18,7 +19,6 @@ DXPanel.__index = DXPanel
 --========================================================
 
 local CONFIG = {
-
     Name = "DXPanel",
 
     Title = "DXPanel",
@@ -29,33 +29,15 @@ local CONFIG = {
     MinWidth = 420,
     MinHeight = 300,
 
-    Background = Color3.fromRGB(
-        12, 12, 14
-    ),
+    Background = Color3.fromRGB(12, 12, 14),
+    Panel = Color3.fromRGB(18, 18, 21),
+    Secondary = Color3.fromRGB(25, 25, 29),
 
-    Panel = Color3.fromRGB(
-        18, 18, 21
-    ),
+    Text = Color3.fromRGB(245, 245, 245),
+    SubText = Color3.fromRGB(150, 150, 155),
 
-    Secondary = Color3.fromRGB(
-        25, 25, 29
-    ),
-
-    Text = Color3.fromRGB(
-        245, 245, 245
-    ),
-
-    SubText = Color3.fromRGB(
-        150, 150, 155
-    ),
-
-    Accent = Color3.fromRGB(
-        220, 35, 45
-    ),
-
-    AccentDark = Color3.fromRGB(
-        120, 15, 25
-    ),
+    Accent = Color3.fromRGB(220, 35, 45),
+    AccentDark = Color3.fromRGB(120, 15, 25),
 
     TweenTime = 0.18,
 }
@@ -65,9 +47,7 @@ local CONFIG = {
 --========================================================
 
 local function tween(object, properties, time)
-
-    if not object
-        or not object.Parent then
+    if not object or not object.Parent then
         return
     end
 
@@ -77,19 +57,24 @@ local function tween(object, properties, time)
         Enum.EasingDirection.Out
     )
 
-    TweenService:Create(
+    local t = TweenService:Create(
         object,
         info,
         properties
-    ):Play()
+    )
+
+    t:Play()
+
+    return t
 end
 
 local function corner(parent, radius)
-
     local c = Instance.new("UICorner")
 
-    c.CornerRadius =
-        UDim.new(0, radius or 8)
+    c.CornerRadius = UDim.new(
+        0,
+        radius or 8
+    )
 
     c.Parent = parent
 
@@ -102,7 +87,6 @@ local function stroke(
     transparency,
     thickness
 )
-
     local s = Instance.new("UIStroke")
 
     s.Color =
@@ -126,7 +110,6 @@ local function padding(
     top,
     bottom
 )
-
     local p = Instance.new("UIPadding")
 
     p.PaddingLeft =
@@ -173,20 +156,32 @@ function DXPanel:CreateWindow(options)
 
     Window.CurrentTab = nil
 
+    Window._Connections = {}
+
+    Window._Destroyed = false
+
     --====================================================
     -- SIZE
     --====================================================
 
     local windowWidth =
-        options.Width
-        or CONFIG.Width
+        math.max(
+            options.Width
+            or CONFIG.Width,
+
+            CONFIG.MinWidth
+        )
 
     local windowHeight =
-        options.Height
-        or CONFIG.Height
+        math.max(
+            options.Height
+            or CONFIG.Height,
+
+            CONFIG.MinHeight
+        )
 
     --====================================================
-    -- SCREEN GUI
+    -- DESTROY OLD GUI
     --====================================================
 
     local old =
@@ -197,6 +192,10 @@ function DXPanel:CreateWindow(options)
     if old then
         old:Destroy()
     end
+
+    --====================================================
+    -- SCREEN GUI
+    --====================================================
 
     local ScreenGui =
         Instance.new("ScreenGui")
@@ -229,7 +228,8 @@ function DXPanel:CreateWindow(options)
     local Main =
         Instance.new("Frame")
 
-    Main.Name = "Main"
+    Main.Name =
+        "Main"
 
     Main.Size =
         UDim2.fromOffset(
@@ -251,9 +251,13 @@ function DXPanel:CreateWindow(options)
     Main.BackgroundColor3 =
         CONFIG.Background
 
-    Main.BorderSizePixel = 0
+    Main.BorderSizePixel =
+        0
 
     Main.ClipsDescendants =
+        true
+
+    Main.Active =
         true
 
     Main.Parent =
@@ -268,7 +272,8 @@ function DXPanel:CreateWindow(options)
         1
     )
 
-    Window.Main = Main
+    Window.Main =
+        Main
 
     --====================================================
     -- TOP BAR
@@ -291,14 +296,18 @@ function DXPanel:CreateWindow(options)
     Top.BackgroundColor3 =
         CONFIG.Panel
 
-    Top.BorderSizePixel = 0
+    Top.BorderSizePixel =
+        0
 
-    Top.Active = true
+    Top.Active =
+        true
 
-    Top.Parent = Main
+    Top.Parent =
+        Main
 
     corner(Top, 12)
 
+    -- Fix rounded bottom
     local TopFix =
         Instance.new("Frame")
 
@@ -321,12 +330,14 @@ function DXPanel:CreateWindow(options)
     TopFix.BackgroundColor3 =
         CONFIG.Panel
 
-    TopFix.BorderSizePixel = 0
+    TopFix.BorderSizePixel =
+        0
 
-    TopFix.Parent = Top
+    TopFix.Parent =
+        Top
 
     --====================================================
-    -- ACCENT
+    -- ACCENT LINE
     --====================================================
 
     local AccentLine =
@@ -351,9 +362,11 @@ function DXPanel:CreateWindow(options)
     AccentLine.BackgroundColor3 =
         CONFIG.Accent
 
-    AccentLine.BorderSizePixel = 0
+    AccentLine.BorderSizePixel =
+        0
 
-    AccentLine.Parent = Top
+    AccentLine.Parent =
+        Top
 
     --====================================================
     -- TITLE
@@ -362,7 +375,8 @@ function DXPanel:CreateWindow(options)
     local Title =
         Instance.new("TextLabel")
 
-    Title.BackgroundTransparency = 1
+    Title.BackgroundTransparency =
+        1
 
     Title.Position =
         UDim2.fromOffset(
@@ -387,7 +401,8 @@ function DXPanel:CreateWindow(options)
     Title.TextColor3 =
         CONFIG.Text
 
-    Title.TextSize = 16
+    Title.TextSize =
+        16
 
     Title.TextXAlignment =
         Enum.TextXAlignment.Left
@@ -399,7 +414,7 @@ function DXPanel:CreateWindow(options)
         Title
 
     --====================================================
-    -- CLOSE
+    -- CLOSE BUTTON
     --====================================================
 
     local Close =
@@ -429,12 +444,14 @@ function DXPanel:CreateWindow(options)
             22
         )
 
-    Close.Text = "×"
+    Close.Text =
+        "×"
 
     Close.TextColor3 =
         CONFIG.Text
 
-    Close.TextSize = 22
+    Close.TextSize =
+        22
 
     Close.Font =
         Enum.Font.GothamBold
@@ -442,10 +459,16 @@ function DXPanel:CreateWindow(options)
     Close.AutoButtonColor =
         false
 
+    Close.ZIndex =
+        30
+
     Close.Parent =
         Top
 
     corner(Close, 8)
+
+    Window.CloseButton =
+        Close
 
     Close.MouseEnter:Connect(
         function()
@@ -464,23 +487,24 @@ function DXPanel:CreateWindow(options)
     Close.MouseLeave:Connect(
         function()
 
-            tween(
-                Close,
-                {
-                    BackgroundColor3 =
-                        Color3.fromRGB(
-                            35,
-                            20,
-                            22
-                        )
-                }
-            )
+            if Window.IsOpen then
+
+                tween(
+                    Close,
+                    {
+                        BackgroundColor3 =
+                            Color3.fromRGB(
+                                35,
+                                20,
+                                22
+                            )
+                    }
+                )
+
+            end
 
         end
     )
-
-    Window.CloseButton =
-        Close
 
     --====================================================
     -- TAB BAR
@@ -511,9 +535,11 @@ function DXPanel:CreateWindow(options)
     TabBar.BackgroundColor3 =
         CONFIG.Panel
 
-    TabBar.BorderSizePixel = 0
+    TabBar.BorderSizePixel =
+        0
 
-    TabBar.ScrollBarThickness = 2
+    TabBar.ScrollBarThickness =
+        2
 
     TabBar.ScrollBarImageColor3 =
         CONFIG.Accent
@@ -553,6 +579,10 @@ function DXPanel:CreateWindow(options)
         "AbsoluteContentSize"
     ):Connect(
         function()
+
+            if not TabBar.Parent then
+                return
+            end
 
             TabBar.CanvasSize =
                 UDim2.new(
@@ -599,7 +629,8 @@ function DXPanel:CreateWindow(options)
     Content.BackgroundColor3 =
         CONFIG.Background
 
-    Content.BorderSizePixel = 0
+    Content.BorderSizePixel =
+        0
 
     Content.Parent =
         Main
@@ -608,18 +639,22 @@ function DXPanel:CreateWindow(options)
         Content
 
     --====================================================
-    -- DRAG
+    -- DRAG SYSTEM
     --====================================================
 
-    local dragging = false
+    local dragging =
+        false
 
-    local dragStart = nil
+    local dragStart =
+        nil
 
-    local startPos = nil
+    local startPos =
+        nil
 
     Top.InputBegan:Connect(
         function(input)
 
+            -- ไม่ให้ปุ่ม Close เริ่ม Drag
             if input.UserInputType ==
                 Enum.UserInputType.MouseButton1
                 or
@@ -627,7 +662,34 @@ function DXPanel:CreateWindow(options)
                 Enum.UserInputType.Touch
             then
 
-                dragging = true
+                local mousePos =
+                    input.Position
+
+                local closePos =
+                    Close.AbsolutePosition
+
+                local closeSize =
+                    Close.AbsoluteSize
+
+                local insideClose =
+                    mousePos.X >= closePos.X
+                    and
+                    mousePos.X <=
+                        closePos.X
+                        + closeSize.X
+                    and
+                    mousePos.Y >= closePos.Y
+                    and
+                    mousePos.Y <=
+                        closePos.Y
+                        + closeSize.Y
+
+                if insideClose then
+                    return
+                end
+
+                dragging =
+                    true
 
                 dragStart =
                     input.Position
@@ -645,7 +707,8 @@ function DXPanel:CreateWindow(options)
                                 Enum.UserInputState.End
                             then
 
-                                dragging = false
+                                dragging =
+                                    false
 
                                 if connection then
                                     connection:Disconnect()
@@ -661,38 +724,49 @@ function DXPanel:CreateWindow(options)
         end
     )
 
-    UserInputService.InputChanged:Connect(
-        function(input)
+    local dragConnection =
+        UserInputService.InputChanged:Connect(
+            function(input)
 
-            if not dragging then
-                return
+                if not dragging then
+                    return
+                end
+
+                if input.UserInputType ~=
+                    Enum.UserInputType.MouseMovement
+                    and
+                    input.UserInputType ~=
+                    Enum.UserInputType.Touch
+                then
+                    return
+                end
+
+                if not Main.Parent then
+                    dragging = false
+                    return
+                end
+
+                local delta =
+                    input.Position
+                    - dragStart
+
+                Main.Position =
+                    UDim2.new(
+                        startPos.X.Scale,
+                        startPos.X.Offset
+                            + delta.X,
+
+                        startPos.Y.Scale,
+                        startPos.Y.Offset
+                            + delta.Y
+                    )
+
             end
+        )
 
-            if input.UserInputType ~=
-                Enum.UserInputType.MouseMovement
-                and
-                input.UserInputType ~=
-                Enum.UserInputType.Touch
-            then
-                return
-            end
-
-            local delta =
-                input.Position
-                - dragStart
-
-            Main.Position =
-                UDim2.new(
-                    startPos.X.Scale,
-                    startPos.X.Offset
-                        + delta.X,
-
-                    startPos.Y.Scale,
-                    startPos.Y.Offset
-                        + delta.Y
-                )
-
-        end
+    table.insert(
+        Window._Connections,
+        dragConnection
     )
 
     --====================================================
@@ -707,16 +781,16 @@ function DXPanel:CreateWindow(options)
 
     Resize.Size =
         UDim2.fromOffset(
-            28,
-            28
+            30,
+            30
         )
 
     Resize.Position =
         UDim2.new(
             1,
-            -28,
+            -30,
             1,
-            -28
+            -30
         )
 
     Resize.BackgroundTransparency =
@@ -728,7 +802,8 @@ function DXPanel:CreateWindow(options)
     Resize.TextColor3 =
         CONFIG.Accent
 
-    Resize.TextSize = 17
+    Resize.TextSize =
+        17
 
     Resize.Font =
         Enum.Font.GothamBold
@@ -736,16 +811,23 @@ function DXPanel:CreateWindow(options)
     Resize.AutoButtonColor =
         false
 
-    Resize.ZIndex = 20
+    Resize.ZIndex =
+        40
 
     Resize.Parent =
         Main
 
-    local resizing = false
+    Window.ResizeButton =
+        Resize
 
-    local resizeStart = nil
+    local resizing =
+        false
 
-    local startSize = nil
+    local resizeStart =
+        nil
+
+    local startSize =
+        nil
 
     Resize.InputBegan:Connect(
         function(input)
@@ -757,7 +839,8 @@ function DXPanel:CreateWindow(options)
                 Enum.UserInputType.Touch
             then
 
-                resizing = true
+                resizing =
+                    true
 
                 resizeStart =
                     input.Position
@@ -775,7 +858,8 @@ function DXPanel:CreateWindow(options)
                                 Enum.UserInputState.End
                             then
 
-                                resizing = false
+                                resizing =
+                                    false
 
                                 if connection then
                                     connection:Disconnect()
@@ -791,47 +875,58 @@ function DXPanel:CreateWindow(options)
         end
     )
 
-    UserInputService.InputChanged:Connect(
-        function(input)
+    local resizeConnection =
+        UserInputService.InputChanged:Connect(
+            function(input)
 
-            if not resizing then
-                return
+                if not resizing then
+                    return
+                end
+
+                if input.UserInputType ~=
+                    Enum.UserInputType.MouseMovement
+                    and
+                    input.UserInputType ~=
+                    Enum.UserInputType.Touch
+                then
+                    return
+                end
+
+                if not Main.Parent then
+                    resizing = false
+                    return
+                end
+
+                local delta =
+                    input.Position
+                    - resizeStart
+
+                local width =
+                    math.max(
+                        CONFIG.MinWidth,
+                        startSize.X
+                            + delta.X
+                    )
+
+                local height =
+                    math.max(
+                        CONFIG.MinHeight,
+                        startSize.Y
+                            + delta.Y
+                    )
+
+                Main.Size =
+                    UDim2.fromOffset(
+                        width,
+                        height
+                    )
+
             end
+        )
 
-            if input.UserInputType ~=
-                Enum.UserInputType.MouseMovement
-                and
-                input.UserInputType ~=
-                Enum.UserInputType.Touch
-            then
-                return
-            end
-
-            local delta =
-                input.Position
-                - resizeStart
-
-            local width =
-                math.max(
-                    CONFIG.MinWidth,
-                    startSize.X
-                        + delta.X
-                )
-
-            local height =
-                math.max(
-                    CONFIG.MinHeight,
-                    startSize.Y
-                        + delta.Y
-                )
-
-            Main.Size =
-                UDim2.fromOffset(
-                    width,
-                    height
-                )
-
-        end
+    table.insert(
+        Window._Connections,
+        resizeConnection
     )
 
     --====================================================
@@ -867,7 +962,8 @@ function DXPanel:CreateWindow(options)
     OpenButton.TextColor3 =
         CONFIG.Text
 
-    OpenButton.TextSize = 14
+    OpenButton.TextSize =
+        14
 
     OpenButton.Font =
         Enum.Font.GothamBold
@@ -878,7 +974,8 @@ function DXPanel:CreateWindow(options)
     OpenButton.Visible =
         false
 
-    OpenButton.ZIndex = 100
+    OpenButton.ZIndex =
+        100
 
     OpenButton.Parent =
         ScreenGui
@@ -894,6 +991,9 @@ function DXPanel:CreateWindow(options)
         0.15,
         1
     )
+
+    Window.OpenButton =
+        OpenButton
 
     OpenButton.MouseEnter:Connect(
         function()
@@ -927,22 +1027,15 @@ function DXPanel:CreateWindow(options)
         end
     )
 
-    OpenButton.MouseButton1Click:Connect(
-        function()
-
-            Window:Open()
-
-        end
-    )
-
-    Window.OpenButton =
-        OpenButton
-
     --====================================================
-    -- PUBLIC WINDOW METHODS
+    -- WINDOW METHODS
     --====================================================
 
     function Window:Open()
+
+        if self._Destroyed then
+            return
+        end
 
         Main.Visible =
             true
@@ -957,6 +1050,10 @@ function DXPanel:CreateWindow(options)
 
     function Window:Close()
 
+        if self._Destroyed then
+            return
+        end
+
         Main.Visible =
             false
 
@@ -970,6 +1067,10 @@ function DXPanel:CreateWindow(options)
 
     function Window:Toggle()
 
+        if self._Destroyed then
+            return
+        end
+
         if self.IsOpen then
             self:Close()
         else
@@ -977,6 +1078,55 @@ function DXPanel:CreateWindow(options)
         end
 
     end
+
+    function Window:Destroy()
+
+        if self._Destroyed then
+            return
+        end
+
+        self._Destroyed =
+            true
+
+        for _, connection in
+            ipairs(self._Connections)
+        do
+
+            pcall(function()
+                connection:Disconnect()
+            end)
+
+        end
+
+        table.clear(
+            self._Connections
+        )
+
+        if ScreenGui then
+            ScreenGui:Destroy()
+        end
+
+    end
+
+    --====================================================
+    -- BUTTON EVENTS
+    --====================================================
+
+    Close.MouseButton1Click:Connect(
+        function()
+
+            Window:Close()
+
+        end
+    )
+
+    OpenButton.MouseButton1Click:Connect(
+        function()
+
+            Window:Open()
+
+        end
+    )
 
     Window.IsOpen =
         true
@@ -1019,7 +1169,7 @@ function DXPanel:AddTab(
         )
 
     Tab.Page.Name =
-        Tab.Title
+        "Page_" .. Tab.Title
 
     Tab.Page.Size =
         UDim2.new(
@@ -1080,13 +1230,17 @@ function DXPanel:AddTab(
     ):Connect(
         function()
 
+            if not Tab.Page.Parent then
+                return
+            end
+
             Tab.Page.CanvasSize =
                 UDim2.new(
                     0,
                     0,
                     0,
                     Layout.AbsoluteContentSize.Y
-                        + 20
+                    + 24
                 )
 
         end
@@ -1124,7 +1278,8 @@ function DXPanel:AddTab(
     Button.TextColor3 =
         CONFIG.SubText
 
-    Button.TextSize = 13
+    Button.TextSize =
+        13
 
     Button.Font =
         Enum.Font.GothamSemibold
@@ -1215,7 +1370,9 @@ function DXPanel:AddTab(
             options or {}
 
         local Section =
-            Instance.new("TextLabel")
+            Instance.new(
+                "TextLabel"
+            )
 
         Section.Size =
             UDim2.new(
@@ -1235,7 +1392,8 @@ function DXPanel:AddTab(
         Section.TextColor3 =
             CONFIG.Accent
 
-        Section.TextSize = 12
+        Section.TextSize =
+            12
 
         Section.Font =
             Enum.Font.GothamBold
@@ -1281,7 +1439,8 @@ function DXPanel:AddTab(
         ButtonFrame.TextColor3 =
             CONFIG.Text
 
-        ButtonFrame.TextSize = 13
+        ButtonFrame.TextSize =
+            13
 
         ButtonFrame.Font =
             Enum.Font.GothamSemibold
@@ -1383,7 +1542,8 @@ function DXPanel:AddTab(
         ButtonFrame.BackgroundColor3 =
             CONFIG.Panel
 
-        ButtonFrame.Text = ""
+        ButtonFrame.Text =
+            ""
 
         ButtonFrame.AutoButtonColor =
             false
@@ -1425,7 +1585,8 @@ function DXPanel:AddTab(
         Label.TextColor3 =
             CONFIG.Text
 
-        Label.TextSize = 13
+        Label.TextSize =
+            13
 
         Label.Font =
             Enum.Font.GothamSemibold
@@ -1617,6 +1778,7 @@ function DXPanel:AddTab(
                 return state
 
             end,
+
         }
     end
 
@@ -1650,7 +1812,8 @@ function DXPanel:AddTab(
         Label.TextColor3 =
             CONFIG.SubText
 
-        Label.TextSize = 12
+        Label.TextSize =
+            12
 
         Label.Font =
             Enum.Font.Gotham
@@ -1676,7 +1839,9 @@ function DXPanel:SelectTab(
     Tab
 )
 
-    if not Tab then
+    if not Window
+        or not Tab
+    then
         return
     end
 
